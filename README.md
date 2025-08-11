@@ -109,7 +109,3 @@ This project is licensed under the **MIT License** – you are free to use, modi
 ---
 
 **Made with ❤️ for healthcare accessibility and innovation.**
-
-```
-
-
