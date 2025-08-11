@@ -1,191 +1,339 @@
-import tkinter as tk
-from tkinter import ttk
+import tkinter
+import customtkinter as ctk
+from tkinter import messagebox
 from datetime import datetime
 import sys
 import os
+import glob
 
 try:
+    from PIL import Image
     import tkintermapview
     from geopy.geocoders import Nominatim
 except ImportError:
-    print("Required libraries not found. Please run: pip install Pillow tkintermapview geopy")
+    print("Required libraries not found. Please run: pip install customtkinter Pillow tkintermapview geopy")
     sys.exit()
 
-# importing the model
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from model.model import DiagnosisModel
 
-# --- Constants for the Modern Professional Theme ---
-WINDOW_BG = "#F1F5F9"
-CARD_BG = "#FFFFFF"
-HEADER_BG = "#1E293B"
-USER_BUBBLE_COLOR = "#3B82F6"
-BOT_BUBBLE_COLOR = "#E2E8F0"
-TEXT_COLOR_DARK = "#0F172A"
-TEXT_COLOR_LIGHT = "#FFFFFF"
-INPUT_BG_COLOR = "#F8FAFC"
+# --- Constants for Glassmorphic Theme ---
 FONT_NAME = "Segoe UI"
-PRIMARY_COLOR = "#3B82F6" # Accent color for bot's name
+ACCENT_COLOR = "#00A8E8"
+ACTIVE_BUTTON_COLOR = "#0077B6"
+TEXT_COLOR = "#EAEAEA"
+TEXT_COLOR_LIGHT = "#EAEAEA"  # Added missing constant
+MUTED_TEXT_COLOR = "#AAB8C2"
+USER_BUBBLE_COLOR = "#005C4B"
+BOT_BUBBLE_COLOR = "gray25"
+FRAME_COLOR = ("#2A3942", "#2A3942")
+CONTENT_COLOR = "#7092A5"  # Added missing constant
 
-class ChatbotApp:
-    BOT_NAME = "Jeevaka"
+# --- Helper Class for Tooltips ---
+class ToolTip:
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tooltip = None
+        self.widget.bind("<Enter>", self.show_tooltip)
+        self.widget.bind("<Leave>", self.hide_tooltip)
 
+    def show_tooltip(self, event):
+        try:
+            x, y, _, _ = self.widget.bbox("insert")
+        except Exception:
+            # fallback when widget doesn't support "insert" bbox (e.g., Button)
+            x, y = 0, 0
+        x += self.widget.winfo_rootx() + self.widget.winfo_width() + 10
+        y += self.widget.winfo_rooty() + 10
+        self.tooltip = tkinter.Toplevel(self.widget)
+        self.tooltip.wm_overrideredirect(True)
+        self.tooltip.wm_geometry(f"+{x}+{y}")
+        label = ctk.CTkLabel(self.tooltip, text=self.text, fg_color="#1E1E1E", text_color="white",
+                            font=(FONT_NAME, 9), corner_radius=6, padx=8, pady=4)
+        label.pack()
+
+    def hide_tooltip(self, event):
+        if self.tooltip:
+            self.tooltip.destroy()
+        self.tooltip = None
+
+# --- Main Application Controller ---
+class MainApp:
     def __init__(self, root):
-        self.model = DiagnosisModel()
-        self.user_symptoms = []
-        self.message_widgets = []
-        
-        self.conversation_state = "awaiting_name" 
-        self.user_name = ""
-        self.user_city = ""
-
         self.root = root
-        self.root.title(f"{self.BOT_NAME} - AI Diagnostic Assistant")
-        self.root.geometry("800x700")
-        self.root.configure(bg=WINDOW_BG)
-        self.root.resizable(True, True)
-        self.root.minsize(600, 500)
+        self.root.title("Jeevaka - AI Diagnostic Suite")
+        self.root.geometry("1920x1080")
+        self.root.minsize(950, 700)
 
-        self._create_header()
-        self._create_input_area()
-        self._create_chat_area()
-        self._create_suggestion_box()
+        ctk.set_appearance_mode("dark")
+
+        self.user_profile = {'name': '', 'age': '', 'city': ''}
+        self.model = DiagnosisModel()
+        self.image_references = []  # To hold all image references
+        self.main_container = ctk.CTkFrame(root, fg_color="transparent")
+        self.main_container.pack(fill=tkinter.BOTH, expand=True)
+
         
-        self.root.bind('<Configure>', self._on_resize)
-        self.start_conversation()
+        self._create_background()
 
-    def _create_header(self):
-        header_frame = tk.Frame(self.root, bg=HEADER_BG)
-        header_frame.pack(fill=tk.X, ipady=12)
-        tk.Label(header_frame, text=f"🩺 {self.BOT_NAME}", font=(FONT_NAME, 16, "bold"), bg=HEADER_BG, fg="white").pack(side=tk.LEFT, padx=15)
+        self._create_navigation_menu()
 
-    def _create_input_area(self):
-        self.input_frame = tk.Frame(self.root, bg=WINDOW_BG)
-        self.input_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=(0, 20))
+        self._create_content_frames()
+
+        self.show_main_menu()
+
+    def _create_background(self):
+        """Create a persistent background image that stays behind all widgets."""
+        try:
+            bg_image_path = os.path.join('assets', 'glass_background.png')
+            bg_image = ctk.CTkImage(Image.open(bg_image_path), size=(1280, 720))
+            
+            # ✅ Place on main_container so it's behind content but visible
+            self.background_label = ctk.CTkLabel(self.main_container, image=bg_image, text="")
+            self.background_label.place(relwidth=1.0, relheight=1.0)
+            self.background_label.lower()  # Send to back
+            self.image_references.append(bg_image)
+            print("Background image loaded successfully.")
+        except Exception as e:
+            print(f"Warning: Could not load background image. {e}")
+
+            # place background and send it to back
+            self.background_label.place(relwidth=1.0, relheight=1.0)
+            try:
+                self.background_label.lower()
+            except Exception:
+                # lowering might fail in some environments; safe to ignore
+                pass
+
+    def _create_navigation_menu(self):
+        self.navigation_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
         
-        input_bg_frame = tk.Frame(self.input_frame, bg=INPUT_BG_COLOR, borderwidth=1, relief="solid", highlightbackground="#CBD5E1", highlightthickness=1)
-        input_bg_frame.pack(fill=tk.X, expand=True)
+        ctk.CTkLabel(
+            self.navigation_frame,
+            text="Jeevaka AI",
+            font=ctk.CTkFont(family=FONT_NAME, size=28, weight="bold"),
+            fg_color="transparent"
+        ).pack(pady=(0, 40))
+        
+        self.nav_buttons = {}
+        nav_items = {"Profile": "profile_icon.png", "Chatbot": "chat_icon.png", "History": "history_icon.png"}
 
-        self.entry_var = tk.StringVar()
-        self.user_entry = tk.Entry(input_bg_frame, textvariable=self.entry_var, font=(FONT_NAME, 12),
-                                relief=tk.FLAT, bg=INPUT_BG_COLOR, fg=TEXT_COLOR_DARK, insertbackground=TEXT_COLOR_DARK)
-        self.user_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=10, padx=10)
+        for text, icon_file in nav_items.items():
+            try:
+                img = Image.open(os.path.join('assets', icon_file))
+                new_height = 48
+                new_width = int((new_height / 2) * 5)
+                resample_filter = Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.ANTIALIAS
+                img = img.resize((new_width, new_height), resample_filter)
+                icon_image = ctk.CTkImage(light_image=img, dark_image=img, size=(new_width, new_height))
+            except Exception:
+                icon_image = None
+            
+            button = ctk.CTkButton(
+                self.navigation_frame, image=icon_image, text="",
+                fg_color=FRAME_COLOR, width=150, height=80,
+                hover_color=ACTIVE_BUTTON_COLOR, corner_radius=15,
+                command=lambda t=text: self.show_frame(f"{t}Frame")
+            )
+            button.pack(fill=tkinter.X, pady=10)
+            self.nav_buttons[f"{text}Frame"] = button
+            ToolTip(button, text)
+
+        # ✅ Ensure navigation is above background (done after creating buttons)
+        try:
+            self.navigation_frame.lift()
+        except Exception:
+            pass
+
+    def _create_content_frames(self):
+        self.frames = {}
+        for F in (ProfileFrame, ChatbotFrame, HistoryFrame):
+            frame = F(parent=self.main_container, controller=self)
+            self.frames[F.__name__] = frame
+
+    def show_main_menu(self):
+        for frame in self.frames.values():
+            frame.place_forget()
+        # show the navigation as the central/menu view
+        self.navigation_frame.place(relx=0.5, rely=0.5, anchor=tkinter.CENTER)
+        try:
+            self.navigation_frame.lift()
+        except Exception:
+            pass
+
+    def show_frame(self, frame_name):
+        self.navigation_frame.place_forget()
+        self.background_label.lower()
+
+        frame = self.frames[frame_name]
+        frame.place(relx=0, rely=0, relwidth=1.0, relheight=1.0)
+
+        if hasattr(frame, 'on_show'):
+            frame.on_show()
+
+
+# --- Base Frame with a "Back to Menu" button ---
+class BaseFrame(ctk.CTkFrame):
+    def __init__(self, parent, controller, title):
+        super().__init__(parent, fg_color="transparent") 
+        self.controller = controller
+        
+        header_frame = ctk.CTkFrame(self, fg_color="transparent")
+        header_frame.pack(fill=tkinter.X, pady=(10, 0), padx=20)
+
+        back_button = ctk.CTkButton(header_frame, text="< Back to Menu", font=(FONT_NAME, 12), text_color=MUTED_TEXT_COLOR,
+                                    fg_color="transparent", hover_color=FRAME_COLOR,
+                                    command=self.controller.show_main_menu)
+        back_button.pack(side=tkinter.LEFT)
+
+        ctk.CTkLabel(header_frame, text=title, font=ctk.CTkFont(family=FONT_NAME, size=24, weight="bold")).pack(side=tkinter.LEFT, expand=True, padx=20)
+
+# --- Section 1: Profile Frame ---
+class ProfileFrame(BaseFrame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, controller, title="Your Profile")
+        
+        # This container remains solid to create the "card" effect
+        container = ctk.CTkFrame(self, fg_color=FRAME_COLOR, corner_radius=15, border_width=1, border_color="gray40")
+        container.pack(expand=True, padx=20, pady=20)
+        
+        fields = {"Name": "name", "Age": "age", "City": "city"}
+        self.entries = {}
+        for label_text, key in fields.items():
+            row = ctk.CTkFrame(container, fg_color="transparent")
+            row.pack(fill=tkinter.X, padx=40, pady=15, side=tkinter.TOP)
+            ctk.CTkLabel(row, text=f"{label_text}:", font=ctk.CTkFont(family=FONT_NAME, size=14), width=50, anchor='w').pack(side=tkinter.LEFT)
+            entry = ctk.CTkEntry(row, font=ctk.CTkFont(family=FONT_NAME, size=14), corner_radius=8, border_width=1)
+            entry.pack(side=tkinter.LEFT, fill=tkinter.X, expand=True)
+            self.entries[key] = entry
+
+        ctk.CTkButton(container, text="Save & Start Chat", font=ctk.CTkFont(family=FONT_NAME, size=14, weight="bold"),
+                    fg_color=ACCENT_COLOR, hover_color="#0077B6", corner_radius=8, height=40,
+                    command=self.save_profile).pack(pady=40, padx=40)
+    
+    def save_profile(self):
+        for key, entry in self.entries.items():
+            self.controller.user_profile[key] = entry.get().strip()
+        messagebox.showinfo("Success", "Your profile has been saved.")
+        self.controller.show_frame("ChatbotFrame")
+
+    def on_show(self):
+        for key, entry in self.entries.items():
+            entry.delete(0, tkinter.END)
+            entry.insert(0, self.controller.user_profile.get(key, ''))
+
+# --- Section 2: Chatbot Frame ---
+class ChatbotFrame(BaseFrame):
+    BOT_NAME = "Jeevaka"
+    def __init__(self, parent, controller):
+        super().__init__(parent, controller, title="Chatbot")
+        self.user_symptoms, self.message_widgets = [], []
+        self.conversation_state, self.user_name, self.user_city = "", "", ""
+        self._create_widgets()
+    
+    def on_show(self):
+        new_name = self.controller.user_profile.get('name')
+        new_city = self.controller.user_profile.get('city')
+        if (self.user_name != new_name) or (self.user_city != new_city) or not self.message_widgets:
+            for widget in self.chat_scroll_frame.winfo_children():
+                widget.destroy()
+            self.message_widgets, self.user_symptoms = [], []
+            self.user_name, self.user_city = new_name, new_city
+            if not self.user_name:
+                self.conversation_state = "awaiting_name"
+            elif not self.user_city:
+                self.conversation_state = "awaiting_location"
+            else:
+                self.conversation_state = "collecting_symptoms"
+            self.start_conversation()
+
+    def _create_widgets(self):
+        # use FRAME_COLOR for the chat card (glass "card"), content area inside can be transparent
+        chat_card = ctk.CTkFrame(self, fg_color=FRAME_COLOR, corner_radius=15, border_width=1, border_color="gray40")
+        chat_card.pack(fill=tkinter.BOTH, expand=True, padx=20, pady=(0, 10))
+        
+        self.input_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.input_frame.pack(side=tkinter.BOTTOM, fill=tkinter.X, padx=20, pady=(0,10))
+        self.input_frame.grid_columnconfigure(0, weight=1)
+        
+        self.user_entry = ctk.CTkEntry(self.input_frame, placeholder_text="Type your symptom here...", font=(FONT_NAME, 14), corner_radius=15, border_width=1)
+        self.user_entry.grid(row=0, column=0, sticky="ew", ipady=10)
         self.user_entry.bind("<Return>", self.handle_send)
-        self.user_entry.bind("<KeyRelease>", self.update_suggestions)
+
+        send_button = ctk.CTkButton(self.input_frame, text="Send", font=(FONT_NAME, 14, "bold"), corner_radius=15, width=80, height=40, command=self.handle_send)
+        send_button.grid(row=0, column=1, padx=(10, 0))
         
-        send_button = tk.Button(input_bg_frame, text="➤", bg=USER_BUBBLE_COLOR, fg="white", font=(FONT_NAME, 14, "bold"),
-                                relief=tk.FLAT, bd=0, activebackground="#2563EB", activeforeground="white",
-                                cursor="hand2", command=self.handle_send)
-        send_button.pack(side=tk.RIGHT, fill=tk.Y, padx=(0,1), pady=1)
-
-    def _create_chat_area(self):
-        chat_card = tk.Frame(self.root, bg=CARD_BG, bd=1, relief="solid", highlightbackground="#CBD5E1", highlightthickness=1)
-        chat_card.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-
-        self.chat_canvas = tk.Canvas(chat_card, bg=CARD_BG, highlightthickness=0)
-        self.chat_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
-
-        scrollbar = ttk.Scrollbar(chat_card, orient="vertical", command=self.chat_canvas.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.chat_canvas.configure(yscrollcommand=scrollbar.set)
-
-        self.message_frame = tk.Frame(self.chat_canvas, bg=CARD_BG)
-        self.canvas_frame = self.chat_canvas.create_window((0, 0), window=self.message_frame, anchor="nw")
-
-        self.message_frame.bind("<Configure>", lambda e: self.chat_canvas.configure(scrollregion=self.chat_canvas.bbox("all")))
-        self.chat_canvas.bind("<Configure>", self.on_canvas_configure)
-
-    def _create_suggestion_box(self):
-        self.suggestion_listbox = tk.Listbox(self.root, height=5, font=(FONT_NAME, 10), relief=tk.FLAT,
-                                            bg="#FFFFFF", highlightthickness=1, highlightbackground=HEADER_BG)
-        self.suggestion_listbox.bind("<<ListboxSelect>>", self.select_suggestion)
-
-    def on_canvas_configure(self, event=None):
-        self.chat_canvas.itemconfig(self.canvas_frame, width=event.width)
-        self._on_resize()
-
-    def _on_resize(self, event=None):
-        new_wraplength = self.chat_canvas.winfo_width() * 0.7
-        for widget_info in self.message_widgets:
-            if widget_info['type'] == 'text':
-                widget_info['bubble'].configure(wraplength=int(new_wraplength))
+        self.chat_scroll_frame = ctk.CTkScrollableFrame(chat_card, fg_color="transparent")
+        self.chat_scroll_frame.pack(fill=tkinter.BOTH, expand=True, padx=5, pady=5)
+        self.chat_scroll_frame.grid_columnconfigure(0, weight=1)
 
     def _add_bubble(self, sender, message=None, map_city=None):
         is_user = (sender == "user")
-        row_frame = tk.Frame(self.message_frame, bg=CARD_BG)
+        anchor = "e" if is_user else "w"
         
-        bubble_color = USER_BUBBLE_COLOR if is_user else BOT_BUBBLE_COLOR
-        bubble_frame = tk.Frame(row_frame, bg=bubble_color)
-        
-        # --- Add the bot's name to its bubbles ---
-        if not is_user:
-            name_label = tk.Label(bubble_frame, text=self.BOT_NAME, font=(FONT_NAME, 10, "bold"),
-                                bg=bubble_color, fg=PRIMARY_COLOR)
-            name_label.pack(anchor='w', padx=12, pady=(8, 0))
+        bubble_frame = ctk.CTkFrame(self.chat_scroll_frame, fg_color=USER_BUBBLE_COLOR if is_user else BOT_BUBBLE_COLOR, corner_radius=12)
         
         if message:
-            text_color = TEXT_COLOR_LIGHT if is_user else TEXT_COLOR_DARK
-            wraplength = int(self.chat_canvas.winfo_width() * 0.7)
-            message_label = tk.Label(bubble_frame, text=message, font=(FONT_NAME, 11), wraplength=wraplength,
-                                    justify=tk.LEFT, bg=bubble_color, fg=text_color, padx=12, pady=5)
-            self.message_widgets.append({'bubble': message_label, 'type': 'text'})
-            # Adjust padding if name is present
-            message_label.pack(side=tk.TOP, anchor='w', pady=(0, 5) if not is_user else 5)
+            name_text = "You" if is_user else self.BOT_NAME
+            name_color = "#99FF99" if is_user else ACCENT_COLOR
+            ctk.CTkLabel(bubble_frame, text=name_text, font=ctk.CTkFont(family=FONT_NAME, size=11, weight="bold"), text_color=name_color).pack(anchor='w', padx=12, pady=(8, 0))
         
+        if message:
+            text_color = TEXT_COLOR_LIGHT
+            ctk.CTkLabel(bubble_frame, text=message, font=(FONT_NAME, 12), justify="left", wraplength=500, fg_color="transparent", text_color=text_color).pack(padx=10, pady=(0, 10))
+
         elif map_city:
+            ctk.CTkLabel(bubble_frame, text=self.BOT_NAME, font=ctk.CTkFont(family=FONT_NAME, size=11, weight="bold"), text_color=ACCENT_COLOR).pack(anchor='w', padx=12, pady=(8, 0))
             try:
-                geolocator = Nominatim(user_agent="ai_diagnosis_app_final_v2")
+                geolocator = Nominatim(user_agent="ai_diagnosis_app_final")
                 location = geolocator.geocode(map_city)
                 if location:
-                    map_widget = tkintermapview.TkinterMapView(bubble_frame, width=350, height=175, corner_radius=0)
+                    map_widget = tkintermapview.TkinterMapView(bubble_frame, width=350, height=175, corner_radius=8)
                     map_widget.set_position(location.latitude, location.longitude)
                     map_widget.set_marker(location.latitude, location.longitude, text=map_city)
                     map_widget.set_zoom(11)
                     map_widget.pack(padx=5, pady=5)
-                    self.message_widgets.append({'bubble': map_widget, 'type': 'map'})
                 else:
-                    self._add_bubble("bot", f"Sorry, I couldn't find a map for {map_city}.")
-            except Exception:
-                self._add_bubble("bot", "Map service is currently unavailable.")
+                    # defer the "couldn't find" message to avoid recursive immediate call
+                    self.after(0, lambda: self._add_bubble("bot", f"Sorry, I couldn't find a map for {map_city}."))
+            except Exception as e:
+                print(f"Map Error: {e}")
+                # defer the message to avoid recursive immediate call
+                self.after(0, lambda: self._add_bubble("bot", "Map service is currently unavailable."))
         
-        timestamp = datetime.now().strftime("%I:%M %p")
-        time_label = tk.Label(row_frame, text=timestamp, font=(FONT_NAME, 8), bg=CARD_BG, fg="#94A3B8")
-        
-        if is_user:
-            bubble_frame.pack(side=tk.RIGHT, pady=2)
-            time_label.pack(side=tk.LEFT, anchor='se', padx=5)
-            row_frame.pack(fill=tk.X, padx=(40, 10), pady=5)
-        else:
-            bubble_frame.pack(side=tk.LEFT, pady=2)
-            time_label.pack(side=tk.RIGHT, anchor='sw', padx=5)
-            row_frame.pack(fill=tk.X, padx=(10, 40), pady=5)
-            
-        self.root.update_idletasks()
-        self.chat_canvas.yview_moveto(1.0)
+        bubble_frame.pack(anchor=anchor, padx=10, pady=5, ipadx=5, ipady=2, side=tkinter.TOP)
 
+        # robust scroll: only call yview_moveto if internal canvas exists
+        self.after(100, lambda: getattr(self.chat_scroll_frame, "_parent_canvas", None) and self.chat_scroll_frame._parent_canvas.yview_moveto(1.0))
+    
     def start_conversation(self):
-        self._add_bubble("bot", f"Hello! I'm {self.BOT_NAME}, I'm here to assist you. What is your name?")
-
+        if self.conversation_state == "awaiting_name":
+            self._add_bubble("bot", f"Hello! I'm {self.BOT_NAME}. To get started, what is your name?")
+        elif self.conversation_state == "awaiting_location":
+            self._add_bubble("bot", f"Nice to meet you, {self.user_name}! Now, please tell me your city.")
+        elif self.conversation_state == "collecting_symptoms":
+            self._add_bubble("bot", f"Welcome back, {self.user_name} from {self.user_city}. How may I assist you today?")
+            self._add_bubble("bot", map_city=self.user_city)
+            self._add_bubble("bot", "Please tell me your first symptom. When you're ready, type 'diagnose'.")
+            
     def handle_send(self, event=None):
-        user_input = self.entry_var.get().strip()
+        user_input = self.user_entry.get().strip()
         if not user_input:
             return
-        self.entry_var.set("")
-        self.suggestion_listbox.place_forget()
         self._add_bubble("user", user_input)
-
+        self.user_entry.delete(0, tkinter.END)
+        
         if self.conversation_state == "awaiting_name":
             self.user_name = user_input.capitalize()
-            self._add_bubble("bot", f"Hello, {self.user_name}! Can you please tell me your city?")
+            self.controller.user_profile['name'] = self.user_name
             self.conversation_state = "awaiting_location"
-        
+            self.start_conversation()
         elif self.conversation_state == "awaiting_location":
             self.user_city = user_input.capitalize()
-            self._add_bubble("bot", f"Nice to meet you, {self.user_name} from {self.user_city}.")
-            self._add_bubble("bot", map_city=self.user_city)
-            self._add_bubble("bot", "Now, please tell me your first symptom.")
+            self.controller.user_profile['city'] = self.user_city
             self.conversation_state = "collecting_symptoms"
-        
+            self.start_conversation()
         elif self.conversation_state == "collecting_symptoms":
             if 'diagnose' in user_input.lower():
                 self.run_diagnosis()
@@ -195,64 +343,100 @@ class ChatbotApp:
 
     def run_diagnosis(self):
         if not self.user_symptoms:
-            self._add_bubble("bot", "Please provide at least one symptom before asking for a diagnosis.")
+            self._add_bubble("bot", "Please provide a symptom.")
             return
-        self._add_bubble("bot", "Thank you. Analyzing your symptoms...")
-        self.root.update_idletasks()
-        disease, _ = self.model.predict_disease(self.user_symptoms)
-        if "Could not identify" in disease or "Not enough information" in disease:
-            self._add_bubble("bot", "I'm sorry, I couldn't determine a likely condition based on your symptoms.")
-        else:
-            description = self.model.scrape_disease_description(disease)
-            precautions = self.model.get_precautions(disease)
-            diagnosis_report = (f"DIAGNOSIS:\n{disease}\n\nSUMMARY:\n{description}\n\nRECOMMENDED PRECAUTIONS:\n" + "\n".join([f" ▸ {p.strip()}" for p in precautions]))
-            self._add_bubble("bot", diagnosis_report)
-            self._save_report(disease, description, "\n".join([f" ▸ {p.strip()}" for p in precautions]))
-            self._add_bubble("bot", "Disclaimer: I am an AI assistant. Please consult a professional doctor for an accurate diagnosis.")
-        self.user_symptoms.clear()
-        self._add_bubble("bot", "You can start over by telling me a new symptom.")
+        self._add_bubble("bot", "Analyzing...")
+        self.after(100, self._perform_diagnosis)
 
-    def _save_report(self, disease, description, precautions):
+    def _perform_diagnosis(self):
+        report = self.controller.model.get_ai_diagnosis(self.user_symptoms)
+        self._add_bubble("bot", report)
+        self._save_report(report)
+        self._add_bubble("bot", "Disclaimer: This is an AI assistant, not a doctor.")
+        self.user_symptoms.clear()
+
+    def _save_report(self, report):
         try:
             reports_dir = "reports"
             if not os.path.exists(reports_dir):
                 os.makedirs(reports_dir)
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             filename = os.path.join(reports_dir, f"report_{self.user_name}_{timestamp}.txt")
-            report_content = (f"AI DIAGNOSIS REPORT\n=====================\nUser: {self.user_name}\nLocation: {self.user_city}\nDate: {datetime.now().strftime('%d %B %Y, %I:%M %p')}\n\nProvided Symptoms:\n- {'\n- '.join(self.user_symptoms)}\n\n--- AI ANALYSIS ---\nPossible Condition: {disease}\n\nSummary:\n{description}\n\nRecommended Precautions:\n{precautions}\n\n--- END OF REPORT ---\n")
+            symptom_list = "\n- ".join(self.user_symptoms)
+            report_content = (
+                f"AI DIAGNOSIS REPORT\n"
+                f"=====================\n"
+                f"User: {self.user_name}\n"
+                f"Location: {self.user_city}\n"
+                f"Date: {datetime.now().strftime('%d %B %Y, %I:%M %p')}\n\n"
+                f"Provided Symptoms:\n- {symptom_list}\n\n"
+                f"--- AI ANALYSIS ---\n{report}\n\n"
+                f"--- END OF REPORT ---\n"
+            )
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(report_content)
             self._add_bubble("bot", f"A copy of this report has been saved as:\n{os.path.abspath(filename)}")
         except Exception as e:
-            print(f"Error saving report: {e}")
             self._add_bubble("bot", "There was an error saving your report.")
 
     def update_suggestions(self, event=None):
-        if self.conversation_state != "collecting_symptoms":
-            self.suggestion_listbox.place_forget()
-            return
-        query = self.entry_var.get()
-        if query:
-            suggestions = self.model.get_symptom_suggestions(query)
-            if suggestions:
-                self.suggestion_listbox.delete(0, tk.END)
-                for s in suggestions[:5]:
-                    self.suggestion_listbox.insert(tk.END, s)
-                x_pos = self.user_entry.winfo_x() + self.input_frame.winfo_x()
-                y_pos = self.input_frame.winfo_y() - 10
-                width = self.user_entry.winfo_width()
-                self.suggestion_listbox.place(x=x_pos, y=y_pos, width=width, anchor='sw')
-                return
-        self.suggestion_listbox.place_forget()
-
+        pass
+    
     def select_suggestion(self, event=None):
-        if self.suggestion_listbox.curselection():
-            selected = self.suggestion_listbox.get(self.suggestion_listbox.curselection())
-            self.entry_var.set(selected)
-            self.suggestion_listbox.place_forget()
-            self.handle_send()
+        pass
 
+class HistoryFrame(BaseFrame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, controller, title="Diagnosis History")
+        # make scroll_frame transparent so background shows through
+        self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent", corner_radius=15)
+        self.scroll_frame.pack(fill=tkinter.BOTH, expand=True, padx=20, pady=10)
+    
+    def on_show(self):
+        self.load_reports()
+    
+    def load_reports(self):
+        for widget in self.scroll_frame.winfo_children():
+            widget.destroy()
+        reports_dir = "reports"
+        try:
+            if not os.path.exists(reports_dir) or not os.listdir(reports_dir):
+                ctk.CTkLabel(self.scroll_frame, text="No reports found.", font=(FONT_NAME, 12)).pack(pady=20)
+                return
+            files = glob.glob(os.path.join(reports_dir, "*.txt"))
+            files.sort(key=os.path.getmtime, reverse=True)
+            for report_path in files[:3]:
+                self.create_report_card(self.scroll_frame, report_path)
+        except Exception:
+            print("Error loading reports.")
+
+    def create_report_card(self, parent, report_path):
+        card = ctk.CTkFrame(parent, fg_color=BOT_BUBBLE_COLOR, corner_radius=10)
+        card.pack(fill=tkinter.X, padx=10, pady=5, ipady=10)
+        try:
+            with open(report_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            user_info = next((line for line in lines if "User:" in line), "User: N/A").strip()
+            date_info = next((line for line in lines if "Date:" in line), "Date: N/A").strip()
+            ctk.CTkLabel(card, text=os.path.basename(report_path), font=(FONT_NAME, 12, "bold"), fg_color="transparent").pack(anchor='w', padx=15)
+            ctk.CTkLabel(card, text=f"{user_info} | {date_info}", font=(FONT_NAME, 10), text_color=MUTED_TEXT_COLOR, fg_color="transparent").pack(anchor='w', padx=15)
+            ctk.CTkButton(card, text="View Full Report", font=(FONT_NAME, 10, "bold"), fg_color=ACCENT_COLOR, width=120,
+                        command=lambda p=report_path: self.open_report(p)).pack(pady=10, anchor='w', padx=15)
+        except Exception as e:
+            print(f"Error reading report {report_path}: {e}")
+
+    def open_report(self, report_path):
+        try:
+            os.startfile(os.path.abspath(report_path))
+        except AttributeError:
+            import subprocess
+            opener = "open" if sys.platform == "darwin" else "xdg-open"
+            subprocess.call([opener, os.path.abspath(report_path)])
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not open the report file.\n{e}")
+
+# --- Main Execution ---
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = ChatbotApp(root)
+    root = ctk.CTk()
+    app = MainApp(root)
     root.mainloop()

@@ -1,0 +1,53 @@
+AI DIAGNOSIS REPORT
+=====================
+User: Ronitraj sinha
+Location: Vapi
+Date: 10 August 2025, 10:14 PM
+
+Provided Symptoms:
+- fever
+- abdominal pain
+- cough
+- body ache
+
+--- AI ANALYSIS ---
+The symptoms fever, abdominal pain, cough, and body ache are non-specific and could indicate a wide range of illnesses.  It's impossible to give a diagnosis without a proper medical examination.  However, some possible diagnoses include:
+
+**Possible Diagnoses (requiring medical evaluation to confirm):**
+
+* **Influenza (Flu):**  Fever, cough, body aches are classic flu symptoms. Abdominal pain can occur, though less commonly.
+* **Viral Gastroenteritis ("Stomach flu"):**  This primarily causes abdominal pain, nausea, vomiting, and diarrhea. Fever and body aches can also be present.
+* **Pneumonia:**  Cough, fever, and body aches are common, and abdominal pain can be present depending on the location of the infection.
+* **Sepsis:**  A life-threatening condition caused by the body's overwhelming response to an infection. Can present with fever, chills, abdominal pain, and body aches.
+* **Appendicitis:**  Characterized by abdominal pain (often localized to the lower right abdomen), fever, and possibly nausea/vomiting. Cough is less common.
+* **Other bacterial infections:**  Many bacterial infections can present with fever, body aches and abdominal pain, depending on location and type of infection.
+* **COVID-19:** Although less common now, COVID-19 can present with these symptoms.
+
+
+**Recommended Next Steps:**
+
+The most crucial next step is to **seek medical attention.**  Do not attempt self-diagnosis or treatment.  The severity and urgency depend on the intensity of the symptoms and the patient's overall health.
+
+* **Contact your doctor or a healthcare provider:** Describe your symptoms clearly and honestly. They can assess the situation and advise on the best course of action. This might involve:
+    * **Over-the-counter medication recommendations:** For symptom relief (e.g., pain relievers, antipyretics).  *Never* self-medicate without medical advice, especially if you have pre-existing conditions.
+    * **Further testing:**  This could include a physical examination, blood tests, chest X-ray, or other imaging studies to determine the underlying cause.
+    * **Referral to a specialist:**  If a more serious condition is suspected.
+* **Monitor your symptoms:**  Pay close attention to any changes in your condition, particularly worsening pain, increased fever, difficulty breathing, or dehydration.  Seek immediate medical attention if your condition worsens significantly.
+* **Rest and hydration:**  Get plenty of rest and drink fluids to help your body fight off infection.
+
+
+**When to Seek Immediate Medical Attention:**
+
+* **High fever (above 103°F or 39.4°C):**
+* **Severe abdominal pain:**
+* **Difficulty breathing:**
+* **Chest pain:**
+* **Confusion or disorientation:**
+* **Bloody vomit or stool:**
+* **Signs of dehydration (e.g., decreased urination, dry mouth):**
+* **Symptoms that rapidly worsen:**
+
+This information is for general knowledge and does not constitute medical advice.  Always consult a healthcare professional for diagnosis and treatment of any medical condition.
+
+
+--- END OF REPORT ---
