@@ -25,9 +25,9 @@ This project combines **NLP**, **custom GUI design**, and **machine learning** t
 ---
 
 ## 🖥 Screenshots
-> _Replace these placeholder images with actual screenshots from your app._
 
-| Main Menu | Chatbot Interface | Report History |
+
+| Main Menu | Chatbot Interface | Report History | 
 |-----------|------------------|----------------|
 | ![Main Menu](assets/screenshot_main.png) | ![Chatbot](assets/screenshot_chat.png) | ![History](assets/screenshot_history.png) |
 
