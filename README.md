@@ -1,4 +1,3 @@
-Here’s the complete **friendly but professional medico-themed README.md** with a **banner/logo placeholder** — just copy and paste this into your `README.md` file.
 
 ````markdown
 # 🩺 Jeevaka – AI-Based Medical Diagnosis Assistant
@@ -6,12 +5,7 @@ Here’s the complete **friendly but professional medico-themed README.md** with
 ![Banner](assets/banner.png)  
 _A modern AI-powered assistant for preliminary medical diagnosis._
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue.svg?logo=python)
-![CustomTkinter](https://img.shields.io/badge/UI-CustomTkinter-4B8BBE)
-![Healthcare AI](https://img.shields.io/badge/AI-Healthcare-red.svg?logo=ai)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
 
----
 
 ## 📌 Overview
 **Jeevaka** is an **AI-powered medical diagnosis assistant** that interacts with users in a friendly chat interface to collect symptoms and provide preliminary AI-driven health insights.  
