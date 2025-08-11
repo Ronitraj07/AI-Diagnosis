@@ -1,5 +1,4 @@
 
-````markdown
 # 🩺 Jeevaka – AI-Based Medical Diagnosis Assistant
 
 ![Banner](assets/banner.png)  
