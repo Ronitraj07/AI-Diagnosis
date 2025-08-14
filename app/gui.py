@@ -74,13 +74,9 @@ class MainApp:
         self.main_container = ctk.CTkFrame(root, fg_color="transparent")
         self.main_container.pack(fill=tkinter.BOTH, expand=True)
 
-        
         self._create_background()
-
         self._create_navigation_menu()
-
         self._create_content_frames()
-
         self.show_main_menu()
 
     def _create_background(self):
@@ -89,7 +85,7 @@ class MainApp:
             bg_image_path = os.path.join('assets', 'glass_background.png')
             bg_image = ctk.CTkImage(Image.open(bg_image_path), size=(1280, 720))
             
-            # ✅ Place on main_container so it's behind content but visible
+            # ✅ Always create background_label
             self.background_label = ctk.CTkLabel(self.main_container, image=bg_image, text="")
             self.background_label.place(relwidth=1.0, relheight=1.0)
             self.background_label.lower()  # Send to back
@@ -97,13 +93,12 @@ class MainApp:
             print("Background image loaded successfully.")
         except Exception as e:
             print(f"Warning: Could not load background image. {e}")
-
-            # place background and send it to back
+            # ✅ Create placeholder so attribute always exists
+            self.background_label = ctk.CTkLabel(self.main_container, text="", fg_color="transparent")
             self.background_label.place(relwidth=1.0, relheight=1.0)
             try:
                 self.background_label.lower()
             except Exception:
-                # lowering might fail in some environments; safe to ignore
                 pass
 
     def _create_navigation_menu(self):
@@ -140,7 +135,6 @@ class MainApp:
             self.nav_buttons[f"{text}Frame"] = button
             ToolTip(button, text)
 
-        # ✅ Ensure navigation is above background (done after creating buttons)
         try:
             self.navigation_frame.lift()
         except Exception:
@@ -155,7 +149,6 @@ class MainApp:
     def show_main_menu(self):
         for frame in self.frames.values():
             frame.place_forget()
-        # show the navigation as the central/menu view
         self.navigation_frame.place(relx=0.5, rely=0.5, anchor=tkinter.CENTER)
         try:
             self.navigation_frame.lift()
@@ -172,8 +165,7 @@ class MainApp:
         if hasattr(frame, 'on_show'):
             frame.on_show()
 
-
-# --- Base Frame with a "Back to Menu" button ---
+# --- Base Frame ---
 class BaseFrame(ctk.CTkFrame):
     def __init__(self, parent, controller, title):
         super().__init__(parent, fg_color="transparent") 
@@ -189,12 +181,10 @@ class BaseFrame(ctk.CTkFrame):
 
         ctk.CTkLabel(header_frame, text=title, font=ctk.CTkFont(family=FONT_NAME, size=24, weight="bold")).pack(side=tkinter.LEFT, expand=True, padx=20)
 
-# --- Section 1: Profile Frame ---
+# --- Profile Frame ---
 class ProfileFrame(BaseFrame):
     def __init__(self, parent, controller):
         super().__init__(parent, controller, title="Your Profile")
-        
-        # This container remains solid to create the "card" effect
         container = ctk.CTkFrame(self, fg_color=FRAME_COLOR, corner_radius=15, border_width=1, border_color="gray40")
         container.pack(expand=True, padx=20, pady=20)
         
@@ -223,7 +213,7 @@ class ProfileFrame(BaseFrame):
             entry.delete(0, tkinter.END)
             entry.insert(0, self.controller.user_profile.get(key, ''))
 
-# --- Section 2: Chatbot Frame ---
+# --- Chatbot Frame ---
 class ChatbotFrame(BaseFrame):
     BOT_NAME = "Jeevaka"
     def __init__(self, parent, controller):
@@ -249,7 +239,6 @@ class ChatbotFrame(BaseFrame):
             self.start_conversation()
 
     def _create_widgets(self):
-        # use FRAME_COLOR for the chat card (glass "card"), content area inside can be transparent
         chat_card = ctk.CTkFrame(self, fg_color=FRAME_COLOR, corner_radius=15, border_width=1, border_color="gray40")
         chat_card.pack(fill=tkinter.BOTH, expand=True, padx=20, pady=(0, 10))
         
@@ -295,16 +284,12 @@ class ChatbotFrame(BaseFrame):
                     map_widget.set_zoom(11)
                     map_widget.pack(padx=5, pady=5)
                 else:
-                    # defer the "couldn't find" message to avoid recursive immediate call
                     self.after(0, lambda: self._add_bubble("bot", f"Sorry, I couldn't find a map for {map_city}."))
             except Exception as e:
                 print(f"Map Error: {e}")
-                # defer the message to avoid recursive immediate call
                 self.after(0, lambda: self._add_bubble("bot", "Map service is currently unavailable."))
         
         bubble_frame.pack(anchor=anchor, padx=10, pady=5, ipadx=5, ipady=2, side=tkinter.TOP)
-
-        # robust scroll: only call yview_moveto if internal canvas exists
         self.after(100, lambda: getattr(self.chat_scroll_frame, "_parent_canvas", None) and self.chat_scroll_frame._parent_canvas.yview_moveto(1.0))
     
     def start_conversation(self):
@@ -375,65 +360,56 @@ class ChatbotFrame(BaseFrame):
             )
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(report_content)
-            self._add_bubble("bot", f"A copy of this report has been saved as:\n{os.path.abspath(filename)}")
+            self._add_bubble("bot", f"A copy of this report has been saved as {filename}")
         except Exception as e:
-            self._add_bubble("bot", "There was an error saving your report.")
+            self._add_bubble("bot", f"Error saving report: {e}")
 
-    def update_suggestions(self, event=None):
-        pass
-    
-    def select_suggestion(self, event=None):
-        pass
-
+# --- History Frame ---
 class HistoryFrame(BaseFrame):
     def __init__(self, parent, controller):
-        super().__init__(parent, controller, title="Diagnosis History")
-        # make scroll_frame transparent so background shows through
-        self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent", corner_radius=15)
-        self.scroll_frame.pack(fill=tkinter.BOTH, expand=True, padx=20, pady=10)
-    
+        super().__init__(parent, controller, title="History")
+        self.history_listbox = None
+        self.details_text = None
+        self._create_widgets()
+
+    def _create_widgets(self):
+        history_card = ctk.CTkFrame(self, fg_color=FRAME_COLOR, corner_radius=15, border_width=1, border_color="gray40")
+        history_card.pack(fill=tkinter.BOTH, expand=True, padx=20, pady=20)
+        
+        self.history_listbox = ctk.CTkScrollableFrame(history_card, fg_color="transparent", width=250)
+        self.history_listbox.pack(side=tkinter.LEFT, fill=tkinter.Y, padx=(10, 5), pady=10)
+
+        self.details_text = ctk.CTkTextbox(history_card, wrap="word", font=(FONT_NAME, 12))
+        self.details_text.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=True, padx=(5, 10), pady=10)
+
     def on_show(self):
-        self.load_reports()
-    
-    def load_reports(self):
-        for widget in self.scroll_frame.winfo_children():
+        for widget in self.history_listbox.winfo_children():
             widget.destroy()
         reports_dir = "reports"
-        try:
-            if not os.path.exists(reports_dir) or not os.listdir(reports_dir):
-                ctk.CTkLabel(self.scroll_frame, text="No reports found.", font=(FONT_NAME, 12)).pack(pady=20)
-                return
-            files = glob.glob(os.path.join(reports_dir, "*.txt"))
-            files.sort(key=os.path.getmtime, reverse=True)
-            for report_path in files[:3]:
-                self.create_report_card(self.scroll_frame, report_path)
-        except Exception:
-            print("Error loading reports.")
+        if not os.path.exists(reports_dir):
+            self.details_text.delete("1.0", tkinter.END)
+            self.details_text.insert(tkinter.END, "No history found.")
+            return
+        report_files = sorted(glob.glob(os.path.join(reports_dir, "report_*.txt")), reverse=True)
+        if not report_files:
+            self.details_text.delete("1.0", tkinter.END)
+            self.details_text.insert(tkinter.END, "No history found.")
+            return
+        for file_path in report_files:
+            filename = os.path.basename(file_path)
+            btn = ctk.CTkButton(self.history_listbox, text=filename, fg_color="transparent", hover_color=FRAME_COLOR,
+                            command=lambda fp=file_path: self._show_report(fp))
+            btn.pack(fill=tkinter.X, padx=5, pady=2)
 
-    def create_report_card(self, parent, report_path):
-        card = ctk.CTkFrame(parent, fg_color=BOT_BUBBLE_COLOR, corner_radius=10)
-        card.pack(fill=tkinter.X, padx=10, pady=5, ipady=10)
+    def _show_report(self, file_path):
         try:
-            with open(report_path, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
-            user_info = next((line for line in lines if "User:" in line), "User: N/A").strip()
-            date_info = next((line for line in lines if "Date:" in line), "Date: N/A").strip()
-            ctk.CTkLabel(card, text=os.path.basename(report_path), font=(FONT_NAME, 12, "bold"), fg_color="transparent").pack(anchor='w', padx=15)
-            ctk.CTkLabel(card, text=f"{user_info} | {date_info}", font=(FONT_NAME, 10), text_color=MUTED_TEXT_COLOR, fg_color="transparent").pack(anchor='w', padx=15)
-            ctk.CTkButton(card, text="View Full Report", font=(FONT_NAME, 10, "bold"), fg_color=ACCENT_COLOR, width=120,
-                        command=lambda p=report_path: self.open_report(p)).pack(pady=10, anchor='w', padx=15)
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.details_text.delete("1.0", tkinter.END)
+            self.details_text.insert(tkinter.END, content)
         except Exception as e:
-            print(f"Error reading report {report_path}: {e}")
-
-    def open_report(self, report_path):
-        try:
-            os.startfile(os.path.abspath(report_path))
-        except AttributeError:
-            import subprocess
-            opener = "open" if sys.platform == "darwin" else "xdg-open"
-            subprocess.call([opener, os.path.abspath(report_path)])
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not open the report file.\n{e}")
+            self.details_text.delete("1.0", tkinter.END)
+            self.details_text.insert(tkinter.END, f"Error reading file: {e}")
 
 # --- Main Execution ---
 if __name__ == "__main__":
