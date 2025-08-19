@@ -72,11 +72,10 @@ AI-Diagnosis/
 ├── app/
 │   ├── gui.py               # Main GUI application
 │   ├── assets/              # Icons, background images
-│
+│   ├── reports/                  # Generated diagnosis reports
 ├── model/
 │   ├── model.py              # AI diagnosis logic
 │
-├── reports/                  # Generated diagnosis reports
 ├── requirements.txt
 ├── README.md
 ```
