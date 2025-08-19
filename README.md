@@ -19,7 +19,6 @@ This project combines **NLP**, **custom GUI design**, and **machine learning** t
 - 🌍 **Location-Aware** – Displays a map for the user's city.
 - 🩺 **AI Diagnosis** – Suggests possible conditions based on symptoms.
 - 📂 **Report Generation** – Saves diagnosis history in neatly formatted text files.
-- 🎨 **Modern UI** – Glassmorphic, dark-themed interface with icons.
 - 📜 **History View** – View and open past diagnosis reports.
 
 ---
