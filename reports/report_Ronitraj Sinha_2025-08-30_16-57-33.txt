@@ -1,0 +1,24 @@
+AI DIAGNOSIS REPORT
+=====================
+User: Ronitraj Sinha
+Location: Vapi
+Date: 30 August 2025, 04:57 PM
+
+Provided Symptoms:
+- cough
+- fever
+- body pain
+
+--- AI ANALYSIS ---
+AI analysis service is unavailable. Error: 400 API key not valid. Please pass a valid API key. [reason: "API_KEY_INVALID"
+domain: "googleapis.com"
+metadata {
+  key: "service"
+  value: "generativelanguage.googleapis.com"
+}
+, locale: "en-US"
+message: "API key not valid. Please pass a valid API key."
+]
+Please check your API key and internet connection.
+
+--- END OF REPORT ---

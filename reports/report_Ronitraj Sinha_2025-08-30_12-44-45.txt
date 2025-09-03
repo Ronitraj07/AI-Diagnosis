@@ -1,0 +1,15 @@
+AI DIAGNOSIS REPORT
+=====================
+User: Ronitraj Sinha
+Location: Vadodara
+Date: 30 August 2025, 12:44 PM
+
+Provided Symptoms:
+- fever
+- cough
+- body pain
+
+--- AI ANALYSIS ---
+I'm sorry, the AI analysis service is currently unavailable. Please check your API key and internet connection.
+
+--- END OF REPORT ---
