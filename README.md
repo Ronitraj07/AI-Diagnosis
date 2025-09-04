@@ -1,7 +1,7 @@
 
 # 🩺 Jeevaka – AI-Based Medical Diagnosis Assistant
 
-![Banner](app/assets/banner.png)  
+![Banner](assets/banner.png)  
 _A modern AI-powered assistant for preliminary medical diagnosis._
 
 
@@ -28,7 +28,7 @@ This project combines **NLP**, **custom GUI design**, and **machine learning** t
 
 | Main Menu | Chatbot Interface | Report History | 
 |-----------|------------------|----------------|
-| ![Main Menu](app/assets/screenshot_main.png) | ![Chatbot](app/assets/screenshot_chat.png) | ![History](app/assets/screenshot_history.png) |
+| ![Main Menu](assets/screenshot_main.png) | ![Chatbot](assets/screenshot_chat.png) | ![History](assets/screenshot_history.png) |
 
 ---
 
@@ -72,9 +72,9 @@ AI-Diagnosis/
 ├── app/
 │   ├── gui.py               # Main GUI application
 │   ├── assets/              # Icons, background images
-│   ├── reports/                  # Generated diagnosis reports
+│   ├── reports/             # Generated diagnosis reports
 ├── model/
-│   ├── model.py              # AI diagnosis logic
+│   ├── model.py             # AI diagnosis logic
 │
 ├── requirements.txt
 ├── README.md
